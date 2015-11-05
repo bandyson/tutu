@@ -45,14 +45,17 @@ chrome.omnibox.onInputChanged.addListener(
 
       x.onload = function() {
         var response = x.response;
-
-        if (!response || !response.responseData || !response.responseData.results ||
-          response.responseData.results.length === 0) {
-
-            errorCallback('No response from' + url);
-            return;
+        var data = response.data;
+        for (i = 0; i < data.length; i++) {
+            var product = data[i];
+            console.log('Product: ' + product.name);
         }
-        console.log(response);
+
+        /*
+        todo: if no data
+          errorCallback('No response from' + url);
+          return;
+        */
       }
 
       x.onerror = function() {
