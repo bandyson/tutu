@@ -21,10 +21,18 @@ chrome.omnibox.onInputChanged.addListener(
         console.log('callVend error. message: ' + errorMessage);
       });
 
+      createVendSale(text, function() {
+        console.log('createVendSale callback');
+        // what do we do here? send the sale?
+
+      }, function(errorMessage) {
+        console.log('callVend error. message: ' + errorMessage);
+      });
+
+
       getImageUrl(text, function(imageUrl, width, height) {
         console.log('Callback for getImageUrl. Search term: ' + text + '\n' +
         'Google image search result: ' + imageUrl);
-
         console.log('width: ' + width + '. height: ' + height + '. if you care.');
       }, function(errorMessage) {
         console.log('Cannot display image. ' + errorMessage);
@@ -32,6 +40,45 @@ chrome.omnibox.onInputChanged.addListener(
 
     });
 
+    function createVendSale(jobNumber, callback, errorCallback) {
+
+      console.log('createVendSale: ' + jobNumber);
+
+      var baseUrl = 'https://fonekingdemo.vendhq.com';
+      var url = baseUrl + '/api/2.0/sales';
+
+      var x = new XMLHttpRequest();
+      x.open('POST', url);
+      x.responseType = 'json';
+
+      // x.open("POST", "/json-handler");
+      x.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+      // x.send(JSON.stringify({name:"John Rambo", time:"2pm"}));
+
+      var sale = {
+          'product_id': '1234'
+      };
+
+      x.onload = function() {
+        var response = x.response;
+
+        var yolo = 'x';
+
+        /*
+        var data = response.data;
+        for (i = 0; i < data.length; i++) {
+            var product = data[i];
+            console.log('Product: ' + product.name);
+        }
+        */
+      }
+
+      x.onerror = function() {
+        errorCallback('Network error.');
+      };
+
+      x.send(JSON.stringify(sale));
+    }
 
     function callVend(sku, callback, errorCallback) {
       console.log('callVend: ' + sku);
