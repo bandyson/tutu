@@ -61,17 +61,13 @@ function createSale(job) {
                 "quantity": 1,
                 // TODO: what does this mean? true? i do want to set the price.
                 "price_set": false,
-                /*
-                 "tax_components": [
-                 {
-                 "rate_id": "080027db-dc32-11e5-fe35-721c2068d021",
-                 "total_tax": 3
-                 },
-                 {"rate_id": "080027db-dc32-11e5-fe35-721c1b38eb2a",
-                 "total_tax": 5
-                 }
+                // TODO: how will taxes be treated? GST?
+                "tax_components": [
+                     {
+                         "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
+                         "total_tax": 10
+                     }
                  ],
-                 */
                 "sequence": 0,
                 "note": "The line item note",
                 "status": "CONFIRMED"
@@ -86,16 +82,13 @@ function postSale(sale, callback, errorCallback) {
     console.log('postSale()');
     console.log(sale);
 
-    // var baseUrl = 'https://fonekingdemo.vendhq.com';
-    var baseUrl = 'https://local-demo.dev.vendhq.localdomain/';
+    var baseUrl = 'https://fonekingdemo.vendhq.com';
+    // var baseUrl = 'https://local-demo.dev.vendhq.localdomain/';
     var url = baseUrl + '/api/2.0/sales';
+
     var x = new XMLHttpRequest();
-
-
     x.open('POST', url);
     x.setRequestHeader('Content-Type', 'application/json');
-
-
     x.responseType = 'json';
 
     x.onload = function () {
