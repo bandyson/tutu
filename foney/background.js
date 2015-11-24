@@ -22,7 +22,12 @@ chrome.omnibox.onInputEntered.addListener(
          console.log('callVend error. message: ' + errorMessage);
          });*/
 
-        var job = getJob(text);
+        var job = getJob(text, function (job) {
+            console.log('getJob callback');
+            console.log(job);
+        }, function(errorMessage) {
+            console.log('getJob error. message: ' + errorMessage);
+        });
 
         // TODO: move inside the callback.
         var sale = createSale(job);
@@ -37,8 +42,50 @@ chrome.omnibox.onInputEntered.addListener(
 
 function getJob(jobNumber, callback, errorCallback) {
     console.log('getJob(). jobNumber: ' + jobNumber);
-    // TODO: call RepairCMS
-    return {'job': 'some fake job'};
+
+    // call Repair CMS for the job details
+    jobNumber = 'QVB36357-1';
+
+    // http://foneking.repaircms.com.au/index.php/getprice/QVB36357-1
+    var baseUrl = 'http://foneking.repaircms.com.au/index.php/getprice/';
+    var url = baseUrl + jobNumber;
+
+    var x = new XMLHttpRequest();
+    x.open('GET', url);
+    // x.setRequestHeader('Content-Type', 'application/json');
+    x.responseType = 'document';
+
+    x.onload = function () {
+        var response = x.response;
+        var status = x.status;
+        if (200 != x.status) {
+            // todo: what do you want to do? what situations cause this?
+        }
+
+        var nodes = response.body.childNodes;
+        var customer = nodes[0].data.trim();
+
+        var notSure = nodes[2].data.trim();
+        var phone = nodes[4].data.trim();
+        console.log(customer);
+
+        // TODO: does it 404 for a non-existent job?
+
+        // translate the job to json
+
+        var job = {
+            "customer": customer,
+            "phone": phone
+        };
+
+        callback(job);
+    };
+
+    x.onerror = function () {
+        errorCallback('Network error.');
+    };
+
+    x.send();
 }
 
 function createSale(job) {
@@ -63,11 +110,11 @@ function createSale(job) {
                 "price_set": false,
                 // TODO: how will taxes be treated? GST?
                 "tax_components": [
-                     {
-                         "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
-                         "total_tax": 10
-                     }
-                 ],
+                    {
+                        "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
+                        "total_tax": 10
+                    }
+                ],
                 "sequence": 0,
                 "note": "The line item note",
                 "status": "CONFIRMED"
@@ -75,8 +122,6 @@ function createSale(job) {
         ]
     };
 }
-
-// TODO: function getJob()
 
 function postSale(sale, callback, errorCallback) {
     console.log('postSale()');
@@ -93,7 +138,9 @@ function postSale(sale, callback, errorCallback) {
 
     x.onload = function () {
         var response = x.response;
-        var resp = JSON.parse(x.responseText);
+
+        // TODO: check the status code
+
         var yolo = 'x';
         /*var data = response.data;
          for (i = 0; i < data.length; i++) {
