@@ -22,21 +22,23 @@ chrome.omnibox.onInputEntered.addListener(
          console.log('callVend error. message: ' + errorMessage);
          });*/
 
-        var job = getJob(text, function (job) {
+        getJob(text, function (job) {
             console.log('getJob callback');
             console.log(job);
+
+            var sale = createSale(job);
+
+            postSale(sale, function () {
+                console.log('postSale callback');
+                console.log(sale);
+
+                // TODO: take me to Vend!
+
+            }, function (errorMessage) {
+                console.log('postSale error. message: ' + errorMessage);
+            });
         }, function(errorMessage) {
             console.log('getJob error. message: ' + errorMessage);
-        });
-
-        // TODO: move inside the callback.
-        var sale = createSale(job);
-
-        postSale(sale, function () {
-            console.log('postSale callback');
-            console.log(sale);
-        }, function (errorMessage) {
-            console.log('postSale error. message: ' + errorMessage);
         });
     });
 
@@ -44,38 +46,51 @@ function getJob(jobNumber, callback, errorCallback) {
     console.log('getJob(). jobNumber: ' + jobNumber);
 
     // call Repair CMS for the job details
+    // TODO: remove
     jobNumber = 'QVB36357-1';
 
-    // http://foneking.repaircms.com.au/index.php/getprice/QVB36357-1
+    // TODO: use config parameter %repair_cms_base_url%
     var baseUrl = 'http://foneking.repaircms.com.au/index.php/getprice/';
     var url = baseUrl + jobNumber;
 
     var x = new XMLHttpRequest();
     x.open('GET', url);
-    // x.setRequestHeader('Content-Type', 'application/json');
     x.responseType = 'document';
 
     x.onload = function () {
         var response = x.response;
-        var status = x.status;
+
+        // TODO: does it 404 for a non-existent job? or check
         if (200 != x.status) {
             // todo: what do you want to do? what situations cause this?
         }
 
+        // get the fields from html
         var nodes = response.body.childNodes;
-        var customer = nodes[0].data.trim();
 
-        var notSure = nodes[2].data.trim();
-        var phone = nodes[4].data.trim();
-        console.log(customer);
-
-        // TODO: does it 404 for a non-existent job?
+        // TODO: split the name
+        var customer            = nodes[0].data.trim();
+        var customerEmail       = nodes[2].data.trim();
+        var customerMobile      = nodes[4].data.trim();
+        var imei                = nodes[6].data.trim();
+        // device name + capacity + colour - do you want to split them?
+        var device              = nodes[8].data.trim();
+        var symptoms            = nodes[10].data.trim();
+        // how should these be split?
+        var partsAndServices    = nodes[10].data.trim();
+        // var price               = nodes[12].data.trim();
+        var price               = nodes[14].data.trim();
 
         // translate the job to json
-
         var job = {
             "customer": customer,
-            "phone": phone
+            "customerEmail": customerEmail,
+            "customerMobile": customerMobile,
+            "IMEISerial": imei,
+            "device": device,
+            "symptoms": symptoms,
+            "partsService": partsAndServices,
+            "price": price
         };
 
         callback(job);
@@ -89,30 +104,47 @@ function getJob(jobNumber, callback, errorCallback) {
 }
 
 function createSale(job) {
-    // TODO: get a real job!
+
+    var saleDate = new Date();
+    saleDate = saleDate.getUTCFullYear() + "-" + saleDate.getUTCMonth() + "-" + saleDate.getUTCDate() + " " +
+        saleDate.getUTCHours() + ":" + saleDate.getUTCMinutes() + ":" + saleDate.getUTCSeconds();
+
     return {
+        // TODO: use config param for register id
         "register_id": "31eb0866-e756-11e5-fed9-8136c14c4177",
-        "sale_date": "2015-10-14 00:06:15", // TODO: will it default to now?
+        "sale_date": saleDate,
+        // TODO: get this from the api
         "user_id": "31eb0866-e756-11e5-fed9-8136c14db57d",
-        "total_price": 100.00,
-        "total_tax": 10,
-        "tax_name": "GST",
-        // TODO: change to PARKED
-        "status": "LAYBY",
+        "total_price": job.price,
+        // TODO: are we charging gst?
+        "total_tax": 0,
+        "tax_name": "No Tax",
+
+        // shit - new sales can't be "PARKED"
+        "status": "SAVED",
+
+        // TODO: what is going to go in the note?
         "note": null,
         "line_items": [
             {
                 // APPLE IPHONE 30 PIN DATA CABLE
                 "product_id": "31eb0866-e75f-11e5-fed9-84e950e7626a",
-                "unit_price": 100.00,
+                //  "unit_price": 100.00,
+                "unit_price": 0,
                 "quantity": 1,
                 // TODO: what does this mean? true? i do want to set the price.
                 "price_set": false,
-                // TODO: how will taxes be treated? GST?
                 "tax_components": [
                     {
+                        //  GST
                         "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
                         "total_tax": 10
+
+                        // No tax
+                        /*
+                        "rate_id": "31eb0866-e756-11e5-fed9-8136c130febf",
+                        "total_tax": 0
+                        */
                     }
                 ],
                 "sequence": 0,
@@ -128,7 +160,6 @@ function postSale(sale, callback, errorCallback) {
     console.log(sale);
 
     var baseUrl = 'https://fonekingdemo.vendhq.com';
-    // var baseUrl = 'https://local-demo.dev.vendhq.localdomain/';
     var url = baseUrl + '/api/2.0/sales';
 
     var x = new XMLHttpRequest();
@@ -138,8 +169,21 @@ function postSale(sale, callback, errorCallback) {
 
     x.onload = function () {
         var response = x.response;
+        // var response = this.response;
 
-        // TODO: check the status code
+        console.log('Sale posted to Vend. Status: ' + x.status);
+        console.log(response);
+        if (201 != x.status) {
+            console.log('Error posting sale.');
+            // var errors = response.errors.global;
+            // var x = 'yolo';
+            // todo: what do you want to do? call the error? what situations cause this?
+        }
+
+        // TODO: what if you're not logged in?
+
+        // call the call back!
+        callback(response);
 
         var yolo = 'x';
         /*var data = response.data;
@@ -178,11 +222,17 @@ function callVend(sku, callback, errorCallback) {
          errorCallback('No response from' + url);
          return;
          */
-    }
+    };
 
     x.onerror = function () {
         errorCallback('Network error.');
     };
 
     x.send();
+}
+
+function getVendUser(callback, errorCallback) {
+    console.log('getVendUser()');
+
+    // TODO: https://fonekingdemo.vendhq.com/api/2.0/user
 }
