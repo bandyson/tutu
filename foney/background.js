@@ -28,11 +28,25 @@ chrome.omnibox.onInputEntered.addListener(
 
             var sale = createSale(job);
 
-            postSale(sale, function () {
+            postSale(sale, function (saleId) {
                 console.log('postSale callback');
-                console.log(sale);
+                console.log('saleId: ' + sale);
 
-                // TODO: take me to Vend!
+                var baseUrl = 'https://fonekingdemo.vendhq.com';
+                var deepLink = '/sell#sale/';
+                var fullDeepLink = baseUrl + deepLink + saleId;
+                console.log(fullDeepLink);
+
+                // take me to Vend!
+                chrome.tabs.query({"currentWindow": true}, function (tabs) {
+                    console.log('chrome.tabs.query callback()');
+                    console.log(tabs);
+
+                    // TODO: figure out the current tab
+                    var tabId = tabs[1].id;
+
+                    chrome.tabs.update(tabId, {url: fullDeepLink});
+                })
 
             }, function (errorMessage) {
                 console.log('postSale error. message: ' + errorMessage);
@@ -83,6 +97,7 @@ function getJob(jobNumber, callback, errorCallback) {
 
         // translate the job to json
         var job = {
+            "jobNumber": jobNumber,
             "customer": customer,
             "customerEmail": customerEmail,
             "customerMobile": customerMobile,
@@ -109,7 +124,12 @@ function createSale(job) {
     saleDate = saleDate.getUTCFullYear() + "-" + saleDate.getUTCMonth() + "-" + saleDate.getUTCDate() + " " +
         saleDate.getUTCHours() + ":" + saleDate.getUTCMinutes() + ":" + saleDate.getUTCSeconds();
 
+    var d = new Date();
+    var time = d.getUTCHours() + ":" + d.getUTCMinutes() + ":" + d.getUTCSeconds();
+
     return {
+        // "receipt_number": job.jobNumber,
+        "receipt_number": time,
         // TODO: use config param for register id
         "register_id": "31eb0866-e756-11e5-fed9-8136c14c4177",
         "sale_date": saleDate,
@@ -119,10 +139,7 @@ function createSale(job) {
         // TODO: are we charging gst?
         "total_tax": 0,
         "tax_name": "No Tax",
-
-        // shit - new sales can't be "PARKED"
         "status": "SAVED",
-
         // TODO: what is going to go in the note?
         "note": null,
         "line_items": [
@@ -182,15 +199,10 @@ function postSale(sale, callback, errorCallback) {
 
         // TODO: what if you're not logged in?
 
-        // call the call back!
-        callback(response);
+        var saleId = response.data.id;
 
-        var yolo = 'x';
-        /*var data = response.data;
-         for (i = 0; i < data.length; i++) {
-         var product = data[i];
-         console.log('Product: ' + product.name);
-         }*/
+        // call the call back!
+        callback(saleId);
     }
 
     x.onerror = function () {
