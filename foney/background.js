@@ -101,7 +101,7 @@ function getJob(jobNumber, callback, errorCallback) {
             "customer": customer,
             "customerEmail": customerEmail,
             "customerMobile": customerMobile,
-            "IMEISerial": imei,
+            "imeiSerial": imei,
             "device": device,
             "symptoms": symptoms,
             "partsService": partsAndServices,
@@ -121,11 +121,17 @@ function getJob(jobNumber, callback, errorCallback) {
 function createSale(job) {
 
     var saleDate = new Date();
-    saleDate = saleDate.getUTCFullYear() + "-" + saleDate.getUTCMonth() + "-" + saleDate.getUTCDate() + " " +
-        saleDate.getUTCHours() + ":" + saleDate.getUTCMinutes() + ":" + saleDate.getUTCSeconds();
+    saleDate = saleDate.getUTCFullYear() + "-" + (saleDate.getUTCMonth() + 1) + "-" + saleDate.getUTCDate() + " " +
+        saleDate.getUTCHours() + ":" + (saleDate.getUTCMinutes() - 1) + ":" + saleDate.getUTCSeconds();
 
     var d = new Date();
     var time = d.getUTCHours() + ":" + d.getUTCMinutes() + ":" + d.getUTCSeconds();
+
+    var note = "IMEI/Serial: " + job.imeiSerial;
+    note += "\nDevice: " + job.device;
+    note += "\nSymptoms: " + job.symptoms;
+
+    // todo: create customer
 
     return {
         // "receipt_number": job.jobNumber,
@@ -144,10 +150,9 @@ function createSale(job) {
         "note": null,
         "line_items": [
             {
-                // APPLE IPHONE 30 PIN DATA CABLE
-                "product_id": "31eb0866-e75f-11e5-fed9-84e950e7626a",
-                //  "unit_price": 100.00,
-                "unit_price": 0,
+                // place holder product to store the job cost against - TODO: get from config
+                "product_id": "0a9f6f41-075f-11e5-fbe7-9662a33b2815",
+                "unit_price": job.price,
                 "quantity": 1,
                 // TODO: what does this mean? true? i do want to set the price.
                 "price_set": false,
@@ -165,7 +170,9 @@ function createSale(job) {
                     }
                 ],
                 "sequence": 0,
-                "note": "The line item note",
+                // TODO: do we need line item notes
+                // "note": note,
+                // TODO: is this the right status?
                 "status": "CONFIRMED"
             }
         ]
@@ -200,10 +207,8 @@ function postSale(sale, callback, errorCallback) {
         // TODO: what if you're not logged in?
 
         var saleId = response.data.id;
-
-        // call the call back!
         callback(saleId);
-    }
+    };
 
     x.onerror = function () {
         errorCallback('Network error.');
