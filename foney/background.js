@@ -37,14 +37,14 @@ chrome.omnibox.onInputEntered.addListener(
                 var fullDeepLink = baseUrl + deepLink + saleId;
                 console.log(fullDeepLink);
 
-                // take me to Vend!
-                chrome.tabs.query({"currentWindow": true}, function (tabs) {
+                // take me to Vend! open the sale in current tab
+                chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
                     console.log('chrome.tabs.query callback()');
                     console.log(tabs);
 
-                    // TODO: figure out the current tab
-                    var tabId = tabs[1].id;
+                    // what if there is no selected tab?
 
+                    var tabId = tabs[0].id;
                     chrome.tabs.update(tabId, {url: fullDeepLink});
                 })
 
@@ -147,7 +147,7 @@ function createSale(job) {
         "tax_name": "No Tax",
         "status": "SAVED",
         // TODO: what is going to go in the note?
-        "note": null,
+        "note": note,
         "line_items": [
             {
                 // place holder product to store the job cost against - TODO: get from config
