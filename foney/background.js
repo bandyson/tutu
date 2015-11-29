@@ -16,39 +16,43 @@ chrome.omnibox.onInputEntered.addListener(
     function (text) {
         console.log('inputEntered: ' + text);
 
-        /*callVend(text, function() {
-         console.log('callVend callback');
-         }, function(errorMessage) {
-         console.log('callVend error. message: ' + errorMessage);
-         });*/
-
         getJob(text, function (job) {
             console.log('getJob callback');
             console.log(job);
 
-            var sale = createSale(job);
+            var customer = getCustomerFromJob(job);
 
-            postSale(sale, function (saleId) {
-                console.log('postSale callback');
-                console.log('saleId: ' + sale);
+            // TODO: provide feedback that you're updating the customer
 
-                var baseUrl = 'https://fonekingdemo.vendhq.com';
-                var deepLink = '/sell#sale/';
-                var fullDeepLink = baseUrl + deepLink + saleId;
-                console.log(fullDeepLink);
+            postCustomer(customer, function (customerId) {
 
-                // take me to Vend! open the sale in current tab
-                chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-                    console.log('chrome.tabs.query callback()');
-                    console.log(tabs);
+                var sale = createSale(job, customerId);
 
-                    // what if there is no selected tab?
+                postSale(sale, function (saleId) {
+                    console.log('postSale callback');
+                    console.log('saleId: ' + sale);
 
-                    var tabId = tabs[0].id;
-                    chrome.tabs.update(tabId, {url: fullDeepLink});
-                })
+                    var baseUrl = 'https://fonekingdemo.vendhq.com';
+                    var deepLink = '/sell#sale/';
+                    var fullDeepLink = baseUrl + deepLink + saleId;
+                    console.log(fullDeepLink);
 
+                    // take me to Vend! open the sale in current tab
+                    chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+                        console.log('chrome.tabs.query callback()');
+                        console.log(tabs);
+
+                        // what if there is no selected tab?
+
+                        var tabId = tabs[0].id;
+                        chrome.tabs.update(tabId, {url: fullDeepLink});
+                    })
+
+                }, function (errorMessage) {
+                    console.log('postSale error. message: ' + errorMessage);
+                });
             }, function (errorMessage) {
+                // TODO: call handleVendApiError()
                 console.log('postSale error. message: ' + errorMessage);
             });
         }, function(errorMessage) {
@@ -82,8 +86,11 @@ function getJob(jobNumber, callback, errorCallback) {
         // get the fields from html
         var nodes = response.body.childNodes;
 
-        // TODO: split the name
         var customer            = nodes[0].data.trim();
+        // TODO: will there be null customers? what about companies etc?
+        var splitCustomer = customer.split(',');
+        var lastName = splitCustomer[0].trim();
+        var firstName = splitCustomer[1] ? splitCustomer[1].trim() : "";
         var customerEmail       = nodes[2].data.trim();
         var customerMobile      = nodes[4].data.trim();
         var imei                = nodes[6].data.trim();
@@ -99,6 +106,8 @@ function getJob(jobNumber, callback, errorCallback) {
         var job = {
             "jobNumber": jobNumber,
             "customer": customer,
+            "firstName": firstName,
+            "lastName": lastName,
             "customerEmail": customerEmail,
             "customerMobile": customerMobile,
             "imeiSerial": imei,
@@ -118,7 +127,7 @@ function getJob(jobNumber, callback, errorCallback) {
     x.send();
 }
 
-function createSale(job) {
+function createSale(job, customerId) {
 
     var saleDate = new Date();
     saleDate = saleDate.getUTCFullYear() + "-" + (saleDate.getUTCMonth() + 1) + "-" + saleDate.getUTCDate() + " " +
@@ -139,6 +148,7 @@ function createSale(job) {
         // TODO: use config param for register id
         "register_id": "31eb0866-e756-11e5-fed9-8136c14c4177",
         "sale_date": saleDate,
+        "customer_id": customerId,
         // TODO: get this from the api
         "user_id": "31eb0866-e756-11e5-fed9-8136c14db57d",
         "total_price": job.price,
@@ -179,6 +189,14 @@ function createSale(job) {
     };
 }
 
+function getCustomerFromJob(job) {
+    return {
+        "first_name": job.firstName,
+        "last_name": job.lastName,
+        "note": job.jobNumber
+    };
+}
+
 function postSale(sale, callback, errorCallback) {
     console.log('postSale()');
     console.log(sale);
@@ -192,10 +210,8 @@ function postSale(sale, callback, errorCallback) {
     x.responseType = 'json';
 
     x.onload = function () {
-        var response = x.response;
-        // var response = this.response;
-
         console.log('Sale posted to Vend. Status: ' + x.status);
+        var response = x.response;
         console.log(response);
         if (201 != x.status) {
             console.log('Error posting sale.');
@@ -205,6 +221,8 @@ function postSale(sale, callback, errorCallback) {
         }
 
         // TODO: what if you're not logged in?
+
+        // TODO: what if the register is closed?
 
         var saleId = response.data.id;
         callback(saleId);
@@ -216,6 +234,41 @@ function postSale(sale, callback, errorCallback) {
 
     x.send(JSON.stringify(sale));
 }
+
+function postCustomer(customer, callback, errorCallback) {
+    console.log('createVendCustomer()');
+
+    var baseUrl = 'https://fonekingdemo.vendhq.com';
+    var url = baseUrl + '/api/2.0/customers';
+
+    var x = new XMLHttpRequest();
+    x.open('POST', url);
+    x.setRequestHeader('Content-Type', 'application/json');
+    x.responseType = 'json';
+
+    x.onload = function () {
+        console.log('Customer posted to Vend. Status: ' + x.status);
+        var response = x.response;
+        console.log(response);
+        if (201 != x.status) {
+            console.log('Error posting customer.');
+            // var errors = response.errors.global;
+        }
+
+        // TODO: what if you're not logged in?
+
+        var customerId = response.data.id;
+        callback(customerId);
+    };
+
+    x.onerror = function () {
+        errorCallback('Network error: ' + url);
+    };
+
+    x.send(JSON.stringify(customer));
+}
+
+// TODO: function handleVendApiError() { }
 
 function callVend(sku, callback, errorCallback) {
     console.log('callVend: ' + sku);
