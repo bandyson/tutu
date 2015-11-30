@@ -1,3 +1,5 @@
+var baseUrl = 'https://fonekingdemo.vendhq.com';
+
 // This event is fired each time the user updates the text in the omnibox,
 // as long as the extension's keyword mode is still active.
 chrome.omnibox.onInputChanged.addListener(
@@ -30,9 +32,8 @@ chrome.omnibox.onInputEntered.addListener(
 
                 postSale(sale, function (saleId) {
                     console.log('postSale callback');
-                    console.log('saleId: ' + sale);
+                    console.log('saleId: ' + saleId);
 
-                    var baseUrl = 'https://fonekingdemo.vendhq.com';
                     var deepLink = '/sell#sale/';
                     var fullDeepLink = baseUrl + deepLink + saleId;
                     console.log(fullDeepLink);
@@ -68,8 +69,8 @@ function getJob(jobNumber, callback, errorCallback) {
     jobNumber = 'QVB36357-1';
 
     // TODO: use config parameter %repair_cms_base_url%
-    var baseUrl = 'http://foneking.repaircms.com.au/index.php/getprice/';
-    var url = baseUrl + jobNumber;
+    var foneKingBaseUrl = 'http://foneking.repaircms.com.au/index.php/getprice/';
+    var url = foneKingBaseUrl + jobNumber;
 
     var x = new XMLHttpRequest();
     x.open('GET', url);
@@ -201,7 +202,6 @@ function postSale(sale, callback, errorCallback) {
     console.log('postSale()');
     console.log(sale);
 
-    var baseUrl = 'https://fonekingdemo.vendhq.com';
     var url = baseUrl + '/api/2.0/sales';
 
     var x = new XMLHttpRequest();
@@ -215,12 +215,8 @@ function postSale(sale, callback, errorCallback) {
         console.log(response);
         if (201 != x.status) {
             console.log('Error posting sale.');
-            // var errors = response.errors.global;
-            // var x = 'yolo';
-            // todo: what do you want to do? call the error? what situations cause this?
+            handleVendApiError(response)
         }
-
-        // TODO: what if you're not logged in?
 
         // TODO: what if the register is closed?
 
@@ -238,7 +234,6 @@ function postSale(sale, callback, errorCallback) {
 function postCustomer(customer, callback, errorCallback) {
     console.log('createVendCustomer()');
 
-    var baseUrl = 'https://fonekingdemo.vendhq.com';
     var url = baseUrl + '/api/2.0/customers';
 
     var x = new XMLHttpRequest();
@@ -256,8 +251,6 @@ function postCustomer(customer, callback, errorCallback) {
             return;
         }
 
-        // TODO: what if you're not logged in?
-
         var customerId = response.data.id;
         callback(customerId);
     };
@@ -269,7 +262,7 @@ function postCustomer(customer, callback, errorCallback) {
     x.send(JSON.stringify(customer));
 }
 
-function handleVendApiError(response, action) {
+function handleVendApiError(response) {
     var error = response.error;
 
     if (error != null) {
@@ -277,7 +270,7 @@ function handleVendApiError(response, action) {
             alert('You must be logged into Vend');
             // TODO: open vend in current tab
         } else {
-            alert(action + " " + error);
+            alert(error);
         }
     }
 
@@ -287,7 +280,6 @@ function handleVendApiError(response, action) {
 function callVend(sku, callback, errorCallback) {
     console.log('callVend: ' + sku);
 
-    var baseUrl = 'https://fonekingdemo.vendhq.com';
     var url = baseUrl + '/api/2.0/products';
 
     var x = new XMLHttpRequest();
@@ -301,11 +293,6 @@ function callVend(sku, callback, errorCallback) {
             var product = data[i];
             // console.log('Product: ' + product.name);
         }
-        /*
-         todo: if no data
-         errorCallback('No response from' + url);
-         return;
-         */
     };
 
     x.onerror = function () {
