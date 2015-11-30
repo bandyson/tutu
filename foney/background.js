@@ -252,7 +252,8 @@ function postCustomer(customer, callback, errorCallback) {
         console.log(response);
         if (201 != x.status) {
             console.log('Error posting customer.');
-            // var errors = response.errors.global;
+            handleVendApiError(response);
+            return;
         }
 
         // TODO: what if you're not logged in?
@@ -268,7 +269,20 @@ function postCustomer(customer, callback, errorCallback) {
     x.send(JSON.stringify(customer));
 }
 
-// TODO: function handleVendApiError() { }
+function handleVendApiError(response, action) {
+    var error = response.error;
+
+    if (error != null) {
+        if ("Access token is missing" === error) {
+            alert('You must be logged into Vend');
+            // TODO: open vend in current tab
+        } else {
+            alert(action + " " + error);
+        }
+    }
+
+    // TODO: deal with nested api errors
+}
 
 function callVend(sku, callback, errorCallback) {
     console.log('callVend: ' + sku);
