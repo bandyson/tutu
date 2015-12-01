@@ -34,11 +34,11 @@ chrome.omnibox.onInputEntered.addListener(
                     console.log('postSale callback');
                     console.log('saleId: ' + saleId);
 
+                    // take me to Vend! open the sale in current tab
                     var deepLink = '/sell#sale/';
                     var fullDeepLink = baseUrl + deepLink + saleId;
                     console.log(fullDeepLink);
 
-                    // take me to Vend! open the sale in current tab
                     chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
                         console.log('chrome.tabs.query callback()');
                         console.log(tabs);
@@ -48,7 +48,6 @@ chrome.omnibox.onInputEntered.addListener(
                         var tabId = tabs[0].id;
                         chrome.tabs.update(tabId, {url: fullDeepLink});
                     })
-
                 }, function (errorMessage) {
                     console.log('postSale error. message: ' + errorMessage);
                 });
@@ -67,6 +66,11 @@ function getJob(jobNumber, callback, errorCallback) {
     // call Repair CMS for the job details
     // TODO: remove
     jobNumber = 'QVB36357-1';
+    /*
+     Qvb67877-1
+     Repairhq68407-1
+     Miranda68493-1
+     */
 
     // TODO: use config parameter %repair_cms_base_url%
     var foneKingBaseUrl = 'http://foneking.repaircms.com.au/index.php/getprice/';
@@ -80,6 +84,7 @@ function getJob(jobNumber, callback, errorCallback) {
         var response = x.response;
 
         // TODO: does it 404 for a non-existent job? or check
+
         if (200 != x.status) {
             // todo: what do you want to do? what situations cause this?
         }
@@ -137,11 +142,14 @@ function createSale(job, customerId) {
     var d = new Date();
     var time = d.getUTCHours() + ":" + d.getUTCMinutes() + ":" + d.getUTCSeconds();
 
-    var note = "IMEI/Serial: " + job.imeiSerial;
+    var note = "Customer: " + job.customer;
+    note += "\nCustomer email: " + job.customerEmail;
+    note += "\nCustomer mobile: " + job.customerMobile;
+    note += "\nIMEI/Serial: " + job.imeiSerial;
     note += "\nDevice: " + job.device;
     note += "\nSymptoms: " + job.symptoms;
-
-    // todo: create customer
+    note += "\nParts and services: " + job.partsService;
+    note += "\nPrice: " + job.price;
 
     return {
         // "receipt_number": job.jobNumber,
@@ -181,9 +189,6 @@ function createSale(job, customerId) {
                     }
                 ],
                 "sequence": 0,
-                // TODO: do we need line item notes
-                // "note": note,
-                // TODO: is this the right status?
                 "status": "CONFIRMED"
             }
         ]
@@ -217,8 +222,6 @@ function postSale(sale, callback, errorCallback) {
             console.log('Error posting sale.');
             handleVendApiError(response)
         }
-
-        // TODO: what if the register is closed?
 
         var saleId = response.data.id;
         callback(saleId);
