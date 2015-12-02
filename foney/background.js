@@ -72,9 +72,13 @@ function getJob(jobNumber, callback, errorCallback) {
     /*
         job numbers
      QVB36357-1
+     view-source:http://foneking.repaircms.com.au/index.php/getprice/QVB36357-1
      Qvb67877-1
+     view-source:http://foneking.repaircms.com.au/index.php/getprice/Qvb67877-1
      Repairhq68407-1
+     view-source:http://foneking.repaircms.com.au/index.php/getprice/Repairhq68407-1
      Miranda68493-1
+     view-source:http://foneking.repaircms.com.au/index.php/getprice/Miranda68493-1
      */
 
     // TODO: use config parameter %repair_cms_base_url%
