@@ -29,8 +29,6 @@ chrome.omnibox.onInputEntered.addListener(
 
             var customer = getCustomerFromJob(job);
 
-            // TODO: provide feedback that you're updating the customer
-
             postCustomer(customer, function (customerId) {
 
                 var sale = createSale(job, customerId);
@@ -72,6 +70,8 @@ function getJob(jobNumber, callback, errorCallback) {
     // TODO: remove
     // jobNumber = 'QVB36357-1';
     /*
+        job numbers
+     QVB36357-1
      Qvb67877-1
      Repairhq68407-1
      Miranda68493-1
@@ -95,7 +95,7 @@ function getJob(jobNumber, callback, errorCallback) {
 
         var first = nodes[0].data.trim();
         if ("** Invalid job refno" === first) {
-            alert("Invalid job number");
+            alert("Invalid job number: " + jobNumber);
             return;
         }
 
@@ -185,14 +185,14 @@ function createSale(job, customerId) {
                 "tax_components": [
                     {
                         //  GST
+                        /*
                         "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
                         "total_tax": 10
+                        */
 
                         // No tax
-                        /*
-                        "rate_id": "31eb0866-e756-11e5-fed9-8136c130febf",
+                        "rate_id": "c1317376-8136-11e5-9ed9-31eb0866e756",
                         "total_tax": 0
-                        */
                     }
                 ],
                 "sequence": 0,
@@ -272,7 +272,9 @@ function postSale(sale, callback, errorCallback) {
         console.log(response);
         if (201 != x.status) {
             console.log('Error posting sale.');
-            handleVendApiError(response)
+            handleVendApiError(response);
+            // TODO: call the errorCallback?
+            return;
         }
 
         var saleId = response.data.id;
@@ -329,7 +331,15 @@ function handleVendApiError(response) {
         }
     }
 
-    // TODO: deal with nested api errors
+    var errors = response.errors.global;
+    var message = '';
+    for (var i = 0; i < errors.length; i++) {
+        error = errors[i];
+        message += error + '\n';
+        console.log(error);
+    }
+
+    alert(message);
 }
 
 function callVend(sku, callback, errorCallback) {
