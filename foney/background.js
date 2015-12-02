@@ -22,6 +22,11 @@ chrome.omnibox.onInputEntered.addListener(
             console.log('getJob callback');
             console.log(job);
 
+            if (!job) {
+                console.log('No job retrieved');
+                return;
+            }
+
             var customer = getCustomerFromJob(job);
 
             // TODO: provide feedback that you're updating the customer
@@ -65,7 +70,7 @@ function getJob(jobNumber, callback, errorCallback) {
 
     // call Repair CMS for the job details
     // TODO: remove
-    jobNumber = 'QVB36357-1';
+    // jobNumber = 'QVB36357-1';
     /*
      Qvb67877-1
      Repairhq68407-1
@@ -83,14 +88,16 @@ function getJob(jobNumber, callback, errorCallback) {
     x.onload = function () {
         var response = x.response;
 
-        // TODO: does it 404 for a non-existent job? or check
-
-        if (200 != x.status) {
-            // todo: what do you want to do? what situations cause this?
-        }
+        // still get a 200 status for a non-existent job
 
         // get the fields from html
         var nodes = response.body.childNodes;
+
+        var first = nodes[0].data.trim();
+        if ("** Invalid job refno" === first) {
+            alert("Invalid job number");
+            return;
+        }
 
         var customer            = nodes[0].data.trim();
         // TODO: will there be null customers? what about companies etc?
@@ -193,6 +200,51 @@ function createSale(job, customerId) {
             }
         ]
     };
+}
+
+function createZeroSale() {
+
+    var sale =
+    {
+        "id": "ea760626-c201-9e65-11e5-97fa544727d0",
+        "short_code": "hci7my",
+        "sale_date": "2015-12-01T20:08:50+13:00",
+        "status": "CLOSED",
+        "customer_id": null,
+        "register_id": "47fe23b6-28f0-11e5-f4e4-785e4b8240a3",
+        "user_id": "bc305bf6-6130-11e4-f15a-1c17bd513036",
+        "invoice_number": "4",
+        "invoice_sequence": 4,
+        "total_tax": "150.00000",
+        "total_price": "1000.00000",
+        "note": "",
+        "receipt_address": "",
+        "register_sale_products": [{
+            "id": "ea760626-c201-9e65-11e5-97fa5632cb33",
+            "product_id": "b8ca3a6e-72f0-11e4-efc6-ace0c113b66a",
+            "price": 1000,
+            "price_set": 0,
+            "discount": 0,
+            "tax": "150.00000",
+            "tax_id": "bc305bf6-6130-11e4-f15a-1c17bd3ae38b",
+            "loyalty_value": "20.00000",
+            "quantity": "1",
+            "sequence": 0,
+            "status": "SAVED",
+            "attributes": [{
+                "name": "line_note",
+                "value": ""
+            }]
+        }],
+        "register_sale_payments": [{
+            "id": "ea760626-c201-9e65-11e5-97fa5f468e04",
+            "register_id": "47fe23b6-28f0-11e5-f4e4-785e4b8240a3",
+            "payment_type_id": 1,
+            "retailer_payment_type_id": "bc305bf6-6130-11e4-f15a-1c17bd49fc43",
+            "payment_date": "2015-12-01T20:08:50+13:00",
+            "amount": 1150
+        }]
+    }
 }
 
 function getCustomerFromJob(job) {
