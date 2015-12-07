@@ -27,38 +27,47 @@ chrome.omnibox.onInputEntered.addListener(
                 return;
             }
 
-            // TODO: check a sale doesn't already exist with the job?
+            getVendUser(function(userId) {
 
-            var customer = getCustomerFromJob(job);
+                // TODO: check a sale doesn't already exist with the job?
 
-            postCustomer(customer, function (customerId) {
+                var customer = getCustomerFromJob(job);
 
-                var sale = createSale(job, customerId);
+                postCustomer(customer, function (customerId) {
 
-                postSale(sale, function (saleId) {
-                    console.log('postSale callback');
-                    console.log('saleId: ' + saleId);
+                    var sale = createSale(job, customerId, userId);
 
-                    // take me to Vend! open the sale in current tab
-                    var deepLink = '/sell#sale/';
-                    var fullDeepLink = baseUrl + deepLink + saleId;
-                    console.log(fullDeepLink);
+                    postSale(sale, function (saleId) {
+                        console.log('postSale callback');
+                        console.log('saleId: ' + saleId);
 
-                    chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-                        console.log('chrome.tabs.query callback()');
-                        console.log(tabs);
+                        // take me to Vend! open the sale in current tab
+                        var deepLink = '/sell#sale/';
+                        var fullDeepLink = baseUrl + deepLink + saleId;
+                        console.log(fullDeepLink);
 
-                        // what if there is no selected tab?
+                        chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+                            console.log('chrome.tabs.query callback()');
+                            console.log(tabs);
 
-                        var tabId = tabs[0].id;
-                        chrome.tabs.update(tabId, {url: fullDeepLink});
-                    })
+                            if (tabs == null) {
+                                alert('error - could not get active tab');
+                                return;
+                            }
+
+                            var tabId = tabs[0].id;
+                            chrome.tabs.update(tabId, {url: fullDeepLink});
+                        })
+                    }, function (errorMessage) {
+                        console.log('postSale error. message: ' + errorMessage);
+                    });
                 }, function (errorMessage) {
+                    // TODO: call handleVendApiError()
                     console.log('postSale error. message: ' + errorMessage);
                 });
+
             }, function (errorMessage) {
-                // TODO: call handleVendApiError()
-                console.log('postSale error. message: ' + errorMessage);
+                console.log('getVendUser error. message: ' + errorMessage);
             });
         }, function(errorMessage) {
             console.log('getJob error. message: ' + errorMessage);
@@ -150,7 +159,7 @@ function getJob(jobNumber, callback, errorCallback) {
     x.send();
 }
 
-function createSale(job, customerId) {
+function createSale(job, customerId, userId) {
 
     var saleDate = new Date();
     saleDate = saleDate.getUTCFullYear() + "-" + (saleDate.getUTCMonth() + 1) + "-" + saleDate.getUTCDate() + " " +
@@ -180,8 +189,7 @@ function createSale(job, customerId) {
         "register_id": "31eb0866-e756-11e5-fed9-8136c14c4177",
         "sale_date": saleDate,
         "customer_id": customerId,
-        // TODO: get this from the api
-        "user_id": "31eb0866-e756-11e5-fed9-8136c14db57d",
+        "user_id": userId,
         "total_price": taxExclPrice,
         "total_tax": taxAmount,
         "tax_name": "GST",
@@ -331,6 +339,36 @@ function postCustomer(customer, callback, errorCallback) {
     x.send(JSON.stringify(customer));
 }
 
+function getVendUser(callback, errorCallback) {
+    console.log('getVendUser()');
+
+    var url = baseUrl + '/api/2.0/user';
+
+    var x = new XMLHttpRequest();
+    x.open('GET', url);
+    x.responseType = 'json';
+
+    x.onload = function () {
+        console.log('getVendUser returned. Status: ' + x.status);
+        var response = x.response;
+        console.log(response);
+        if (200 != x.status) {
+            console.log('Error getting Vend user.');
+            handleVendApiError(response);
+            return;
+        }
+
+        var userId = response.data.id;
+        callback(userId);
+    };
+
+    x.onerror = function () {
+        errorCallback('Network error: ' + url);
+    };
+
+    x.send();
+}
+
 function handleVendApiError(response) {
     var error = response.error;
 
@@ -377,10 +415,4 @@ function callVend(sku, callback, errorCallback) {
     };
 
     x.send();
-}
-
-function getVendUser(callback, errorCallback) {
-    console.log('getVendUser()');
-
-    // TODO: https://fonekingdemo.vendhq.com/api/2.0/user
 }
