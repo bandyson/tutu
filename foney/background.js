@@ -27,6 +27,8 @@ chrome.omnibox.onInputEntered.addListener(
                 return;
             }
 
+            // TODO: check a sale doesn't already exist with the job?
+
             var customer = getCustomerFromJob(job);
 
             postCustomer(customer, function (customerId) {
@@ -67,8 +69,7 @@ function getJob(jobNumber, callback, errorCallback) {
     console.log('getJob(). jobNumber: ' + jobNumber);
 
     // call Repair CMS for the job details
-    // TODO: remove
-    // jobNumber = 'QVB36357-1';
+
     /*
         job numbers
      QVB36357-1
@@ -79,6 +80,11 @@ function getJob(jobNumber, callback, errorCallback) {
      view-source:http://foneking.repaircms.com.au/index.php/getprice/Repairhq68407-1
      Miranda68493-1
      view-source:http://foneking.repaircms.com.au/index.php/getprice/Miranda68493-1
+
+     Jobs with parts:
+     REPAIRHQ70654-1
+     REPAIRHQ70656-1
+     REPAIRHQ70658-1
      */
 
     // TODO: use config parameter %repair_cms_base_url%
@@ -162,6 +168,11 @@ function createSale(job, customerId) {
     note += "\nParts and services: " + job.partsService;
     note += "\nPrice: " + job.price;
 
+    var taxExclPrice = job.price / 1.1;
+    taxExclPrice = Math.round(taxExclPrice * 100) / 100;
+    var taxAmount = job.price / 11;
+    taxAmount = Math.round(taxAmount * 100) / 100;
+
     return {
         // "receipt_number": job.jobNumber,
         "receipt_number": time,
@@ -171,32 +182,29 @@ function createSale(job, customerId) {
         "customer_id": customerId,
         // TODO: get this from the api
         "user_id": "31eb0866-e756-11e5-fed9-8136c14db57d",
-        "total_price": job.price,
-        // TODO: are we charging gst?
-        "total_tax": 0,
-        "tax_name": "No Tax",
+        "total_price": taxExclPrice,
+        "total_tax": taxAmount,
+        "tax_name": "GST",
         "status": "SAVED",
-        // TODO: what is going to go in the note?
         "note": note,
         "line_items": [
             {
                 // place holder product to store the job cost against - TODO: get from config
                 "product_id": "0a9f6f41-075f-11e5-fbe7-9662a33b2815",
-                "unit_price": job.price,
+                "unit_price": taxExclPrice,
                 "quantity": 1,
-                // TODO: what does this mean? true? i do want to set the price.
                 "price_set": false,
                 "tax_components": [
                     {
                         //  GST
-                        /*
                         "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
-                        "total_tax": 10
-                        */
+                        "total_tax": taxAmount
 
                         // No tax
+                        /*
                         "rate_id": "c1317376-8136-11e5-9ed9-31eb0866e756",
                         "total_tax": 0
+                        */
                     }
                 ],
                 "sequence": 0,
