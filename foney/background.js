@@ -18,49 +18,6 @@ chrome.omnibox.onInputEntered.addListener(
     function (text) {
         console.log('inputEntered: ' + text);
 
-        var tShirt = 'tshirt-white';
-        var coffee = 'coffee-hot';
-
-        var products = [tShirt, coffee];
-
-        function someFunction(a, b, callback) {
-            console.log('Hey doing some stuff!');
-            callback();
-        }
-
-        asyncLoop(products.length, function(loop) {
-                /*someFunction(1, 2, function(result) {
-
-                    // log the iteration
-                    console.log(loop.iteration());
-
-                    // Okay, for cycle could continue
-                    loop.next();
-                })},
-                */
-
-                var sku = products[loop.iteration()];
-
-                getVendProduct(sku, function(product) {
-
-                    // log the iteration
-                    console.log(loop.iteration());
-                    console.log('sku: ' + sku);
-
-                    console.log(product);
-
-                    // Okay, for cycle could continue
-                    loop.next();
-
-                }, function (errorMessage) {
-                    console.log('getVendProduct error. message: ' + errorMessage);
-                })},
-
-            function(){console.log('cycle ended')}
-        );
-
-
-
         getJob(text, function (job) {
             console.log('getJob callback');
             console.log(job);
@@ -77,31 +34,33 @@ chrome.omnibox.onInputEntered.addListener(
                 // get the vend products for the parts used
                 var partSkus = job.parts;
                 var products = [];
-                var waiting = false;
-                //while (partSkus.length > 0) {
-                    console.log('Products remaining ' + partSkus.length);
-                    var sku = partSkus[0];
 
-                    // don't fire off another request if the last hasn't returned
-                    if (!waiting) {
-                        waiting = true;
+                asyncLoop(partSkus.length, function(loop) {
+                    var sku = partSkus[loop.iteration()];
+                    console.log('sku: ' + sku);
 
-                        getVendProduct(sku, function(product) {
+                    getVendProduct(sku, function(product) {
+
+                        console.log(loop.iteration());
+                        console.log(product);
+                        if (product) {
                             products.push(product);
-                            partSkus = partSkus.slice(1);
-                            waiting = false;
-                        }, function (errorMessage) {
-                            // TODO: call handleVendApiError()
-                            console.log('getVendProduct error. message: ' + errorMessage);
-                        });
+                        }
+
+                        loop.next();
+                    }, function (errorMessage) {
+                        console.log('getVendProduct error. message: ' + errorMessage);
+                    })},
+                    function() {
+                        console.log('product loop ended')
                     }
-                //}
+                );
 
                 var customer = getCustomerFromJob(job);
 
                 postCustomer(customer, function (customerId) {
 
-                    var sale = createSale(job, customerId, userId);
+                    var sale = createSale(job, products, customerId, userId);
 
                     postSale(sale, function (saleId) {
                         console.log('postSale callback');
@@ -233,7 +192,7 @@ function getJob(jobNumber, callback, errorCallback) {
     x.send();
 }
 
-function createSale(job, customerId, userId) {
+function createSale(job, products, customerId, userId) {
 
     var saleDate = new Date();
     saleDate = saleDate.getUTCFullYear() + "-" + (saleDate.getUTCMonth() + 1) + "-" + saleDate.getUTCDate() + " " +
@@ -256,6 +215,47 @@ function createSale(job, customerId, userId) {
     var taxAmount = job.price / 11;
     taxAmount = Math.round(taxAmount * 100) / 100;
 
+    var lineItems = [];
+    var priceLineItem = {
+        // place holder product to store the job cost against - TODO: get from config
+        "product_id": "0a9f6f41-075f-11e5-fbe7-9662a33b2815",
+        "unit_price": taxExclPrice,
+        "quantity": 1,
+        "price_set": false,
+        "tax_components": [
+            {
+                //  GST
+                "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
+                "total_tax": taxAmount
+            }
+        ],
+        "sequence": 0,
+        "status": "CONFIRMED"
+    };
+    lineItems.push(priceLineItem);
+
+    for (var i = 0; i < products.length; i++) {
+        var product = products[i];
+
+        var lineItem = {
+            "product_id": product.id,
+            "unit_price": 0, // TODO: get the price from the object
+            "quantity": 1, // TODO: what does it look like if you have more than one of the part?
+            "price_set": false,
+            "tax_components": [
+                {
+                    //  GST
+                    "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
+                    "total_tax": taxAmount
+                }
+            ],
+            "sequence": i + 1,
+            "status": "CONFIRMED"
+        };
+
+        lineItems.push(lineItem);
+    }
+
     return {
         // "receipt_number": job.jobNumber,
         "receipt_number": time,
@@ -269,30 +269,7 @@ function createSale(job, customerId, userId) {
         "tax_name": "GST",
         "status": "SAVED",
         "note": note,
-        "line_items": [
-            {
-                // place holder product to store the job cost against - TODO: get from config
-                "product_id": "0a9f6f41-075f-11e5-fbe7-9662a33b2815",
-                "unit_price": taxExclPrice,
-                "quantity": 1,
-                "price_set": false,
-                "tax_components": [
-                    {
-                        //  GST
-                        "rate_id": "c1423fed-8136-11e5-9ed9-31eb0866e756",
-                        "total_tax": taxAmount
-
-                        // No tax
-                        /*
-                        "rate_id": "c1317376-8136-11e5-9ed9-31eb0866e756",
-                        "total_tax": 0
-                        */
-                    }
-                ],
-                "sequence": 0,
-                "status": "CONFIRMED"
-            }
-        ]
+        "line_items": lineItems
     };
 }
 
