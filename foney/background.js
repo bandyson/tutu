@@ -18,6 +18,49 @@ chrome.omnibox.onInputEntered.addListener(
     function (text) {
         console.log('inputEntered: ' + text);
 
+        var tShirt = 'tshirt-white';
+        var coffee = 'coffee-hot';
+
+        var products = [tShirt, coffee];
+
+        function someFunction(a, b, callback) {
+            console.log('Hey doing some stuff!');
+            callback();
+        }
+
+        asyncLoop(products.length, function(loop) {
+                /*someFunction(1, 2, function(result) {
+
+                    // log the iteration
+                    console.log(loop.iteration());
+
+                    // Okay, for cycle could continue
+                    loop.next();
+                })},
+                */
+
+                var sku = products[loop.iteration()];
+
+                getVendProduct(sku, function(product) {
+
+                    // log the iteration
+                    console.log(loop.iteration());
+                    console.log('sku: ' + sku);
+
+                    console.log(product);
+
+                    // Okay, for cycle could continue
+                    loop.next();
+
+                }, function (errorMessage) {
+                    console.log('getVendProduct error. message: ' + errorMessage);
+                })},
+
+            function(){console.log('cycle ended')}
+        );
+
+
+
         getJob(text, function (job) {
             console.log('getJob callback');
             console.log(job);
@@ -29,7 +72,30 @@ chrome.omnibox.onInputEntered.addListener(
 
             getVendUser(function(userId) {
 
-                // TODO: check a sale doesn't already exist with the job?
+                // TODO: check a sale doesn't already exist with the job
+
+                // get the vend products for the parts used
+                var partSkus = job.parts;
+                var products = [];
+                var waiting = false;
+                //while (partSkus.length > 0) {
+                    console.log('Products remaining ' + partSkus.length);
+                    var sku = partSkus[0];
+
+                    // don't fire off another request if the last hasn't returned
+                    if (!waiting) {
+                        waiting = true;
+
+                        getVendProduct(sku, function(product) {
+                            products.push(product);
+                            partSkus = partSkus.slice(1);
+                            waiting = false;
+                        }, function (errorMessage) {
+                            // TODO: call handleVendApiError()
+                            console.log('getVendProduct error. message: ' + errorMessage);
+                        });
+                    }
+                //}
 
                 var customer = getCustomerFromJob(job);
 
@@ -92,8 +158,11 @@ function getJob(jobNumber, callback, errorCallback) {
 
      Jobs with parts:
      REPAIRHQ70654-1
+     view-source:http://foneking.repaircms.com.au/index.php/getprice/REPAIRHQ70654-1
      REPAIRHQ70656-1
+     view-source:http://foneking.repaircms.com.au/index.php/getprice/REPAIRHQ70656-1
      REPAIRHQ70658-1
+     view-source:http://foneking.repaircms.com.au/index.php/getprice/REPAIRHQ70658-1
      */
 
     // TODO: use config parameter %repair_cms_base_url%
@@ -123,15 +192,20 @@ function getJob(jobNumber, callback, errorCallback) {
         var splitCustomer = customer.split(',');
         var lastName = splitCustomer[0].trim();
         var firstName = splitCustomer[1] ? splitCustomer[1].trim() : "";
+
         var customerEmail       = nodes[2].data.trim();
         var customerMobile      = nodes[4].data.trim();
         var imei                = nodes[6].data.trim();
         // device name + capacity + colour - do you want to split them?
         var device              = nodes[8].data.trim();
         var symptoms            = nodes[10].data.trim();
-        // how should these be split?
-        var partsAndServices    = nodes[10].data.trim();
-        // var price               = nodes[12].data.trim();
+        // how should these be split? parts separated by a comma?
+        var parts               = nodes[12].data.trim();
+        if (parts) {
+            parts = parts.split(",");
+        }
+
+        // var price            = nodes[12].data.trim();
         var price               = nodes[14].data.trim();
 
         // translate the job to json
@@ -145,7 +219,7 @@ function getJob(jobNumber, callback, errorCallback) {
             "imeiSerial": imei,
             "device": device,
             "symptoms": symptoms,
-            "partsService": partsAndServices,
+            "parts": parts,
             "price": price
         };
 
@@ -174,7 +248,7 @@ function createSale(job, customerId, userId) {
     note += "\nIMEI/Serial: " + job.imeiSerial;
     note += "\nDevice: " + job.device;
     note += "\nSymptoms: " + job.symptoms;
-    note += "\nParts and services: " + job.partsService;
+    note += "\nParts: " + job.parts;
     note += "\nPrice: " + job.price;
 
     var taxExclPrice = job.price / 1.1;
@@ -369,6 +443,38 @@ function getVendUser(callback, errorCallback) {
     x.send();
 }
 
+function getVendProduct(sku, callback, errorCallback) {
+    console.log('getProduct()');
+
+    var url = baseUrl + '/api/products?sku=' + sku;
+
+    var x = new XMLHttpRequest();
+    x.open('GET', url);
+    x.responseType = 'json';
+
+    x.onload = function () {
+        console.log('getProduct returned. Status: ' + x.status);
+        var response = x.response;
+        console.log(response);
+        if (200 != x.status) {
+            console.log('Error getting product: ' + sku);
+            handleVendApiError(response);
+            return;
+        }
+
+        // TODO: check there is actually data in there
+
+        var product = response.products[0];
+        callback(product);
+    };
+
+    x.onerror = function () {
+        errorCallback('Network error: ' + url);
+    };
+
+    x.send();
+}
+
 function handleVendApiError(response) {
     var error = response.error;
 
@@ -392,27 +498,35 @@ function handleVendApiError(response) {
     alert(message);
 }
 
-function callVend(sku, callback, errorCallback) {
-    console.log('callVend: ' + sku);
+function asyncLoop(iterations, func, callback) {
+    var index = 0;
+    var done = false;
 
-    var url = baseUrl + '/api/2.0/products';
+    var loop = {
+        next: function() {
+            if (done) {
+                return;
+            }
 
-    var x = new XMLHttpRequest();
-    x.open('GET', url);
-    x.responseType = 'json';
+            if (index < iterations) {
+                index++;
+                func(loop);
+            } else {
+                done = true;
+                callback();
+            }
+        },
 
-    x.onload = function () {
-        var response = x.response;
-        var data = response.data;
-        for (i = 0; i < data.length; i++) {
-            var product = data[i];
-            // console.log('Product: ' + product.name);
+        iteration: function() {
+            return index - 1;
+        },
+
+        break: function() {
+            done = true;
+            callback();
         }
     };
 
-    x.onerror = function () {
-        errorCallback('Network error.');
-    };
-
-    x.send();
+    loop.next();
+    return loop;
 }
