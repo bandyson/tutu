@@ -1,5 +1,23 @@
 var baseUrl = 'https://fonekingdemo.vendhq.com';
 
+// Background
+chrome.extension.onMessage.addListener(function(request, sender, callback) {
+
+    console.log('extension invoked via onMessage()');
+
+    if (request.anyname == "anything") {
+
+        // function_logic_here();
+
+        alert('hell yeah');
+
+
+        //Optionally, callback:
+        callback();
+    }
+});
+
+
 // This event is fired each time the user updates the text in the omnibox,
 // as long as the extension's keyword mode is still active.
 chrome.omnibox.onInputChanged.addListener(

@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
 
-  "name": "Fone King",
-  "description": "Get jobs into Vend from RepairCMS",
+  "name": "Fone King to Vend",
+  "description": "Get jobs from RepairCMS into Vend",
   "version": "1.0",
 
   "background": {
@@ -13,8 +13,21 @@
 
   "browser_action": {
     "default_icon": "icon.png",
-    "default_title": "Get RepairCMS Job"
+    "default_title": "Fone King to Vend",
+    "default_popup": "popup.html"
   },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "http://www.google.com/*",
+        "https://fonekingdemo.vendhq.com/*",
+        "http://foneking.repaircms.com.au/"
+      ],
+      "js": ["contentscript.js", "popup.js"]
+    }
+  ],
+
   "permissions": [
     "activeTab",
     "https://fonekingdemo.vendhq.com/",
