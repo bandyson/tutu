@@ -1,0 +1,61 @@
+<!doctype html>
+<!--
+ This page is shown when the extension button is clicked, because the
+ "browser_action" field in manifest.json contains the "default_popup" key with
+ value "popup.html".
+ -->
+<html>
+  <head>
+    <title>Fone King to Vend</title>
+    <style>
+      body {
+        font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
+        font-size: 100%;
+      }
+      #status {
+        /* avoid an excessively wide status text */
+        white-space: pre;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        max-width: 400px;
+      }
+
+
+    </style>
+
+    <!--
+      - JavaScript and HTML must be in separate files: see our Content Security
+      - Policy documentation[1] for details and explanation.
+      -
+      - [1]: https://developer.chrome.com/extensions/contentSecurityPolicy
+     -->
+    <script src="popup.js"></script>
+  </head>
+  <body>
+    <div id="status"></div>
+    <img id="image-result" hidden>
+
+    <div class="gstl_0 sbib_a" style="height: 38px; border: 1px solid #4d90fe; width: 584px;">
+        <div class="sbib_b" id="sb_ifc0" dir="ltr">
+            <div id="gs_lc0" style="position: relative;">
+                <input class="gsfi" id="lst-ib" maxlength="2048" name="q" autocomplete="off" title="Search" type="text"
+                       value="" role="combobox" dir="ltr" spellcheck="false"
+                       style="border: none; padding: 0px; margin: 0px; height: auto; width: 100%; position: absolute;
+                        z-index: 6; left: 0px; outline: none; background: url(&quot;data:image/gif;base64,R0lGODlhAQABAID/AMDAwAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw%3D%3D&quot;) transparent;">
+
+                <div class="gsfi" id="gs_sc0" style="color: transparent; padding: 0px; position: absolute; z-index: 2;
+                    white-space: pre; visibility: hidden; background: transparent;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="jsb" style="padding-top:18px">
+        <center>
+            <input id="btn-get-job" value="Get Job" name="btnK" type="submit" >
+            <input value="I'm Feeling Lucky" aria-label="I'm Feeling Lucky" name="btnI" type="submit" jsaction="sf.lck">
+        </center>
+    </div>
+  </body>
+</html>
+
