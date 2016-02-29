@@ -20,7 +20,6 @@
   "content_scripts": [
     {
       "matches": [
-        "http://www.google.com/*",
         "https://fonekingdemo.vendhq.com/*",
         "http://foneking.repaircms.com.au/"
       ],
@@ -30,6 +29,7 @@
 
   "permissions": [
     "activeTab",
+    "tabs",
     "https://fonekingdemo.vendhq.com/",
     "http://foneking.repaircms.com.au/"
   ]

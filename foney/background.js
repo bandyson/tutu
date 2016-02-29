@@ -3,16 +3,10 @@ var baseUrl = 'https://fonekingdemo.vendhq.com';
 // Background
 chrome.extension.onMessage.addListener(function(request, sender, callback) {
 
-    console.log('extension invoked via onMessage()');
+    if (request.jobNumber) {
 
-    if (request.anyname == "anything") {
+        createAndOpenSale(request.jobNumber);
 
-        // function_logic_here();
-
-        alert('hell yeah');
-
-
-        //Optionally, callback:
         callback();
     }
 });
@@ -34,26 +28,32 @@ chrome.omnibox.onInputChanged.addListener(
 // This event is fired when the user accepts the input in the omnibox.
 chrome.omnibox.onInputEntered.addListener(
     function (text) {
-        console.log('inputEntered: ' + text);
+        createAndOpenSale(text);
+    });
 
-        getJob(text, function (job) {
-            console.log('getJob callback');
-            console.log(job);
 
-            if (!job) {
-                console.log('No job retrieved');
-                return;
-            }
+function createAndOpenSale(jobNumber) {
 
-            getVendUser(function(userId) {
+    console.log('createAndOpenSale for job: ' + jobNumber);
 
-                // TODO: check a sale doesn't already exist with the job
+    getJob(jobNumber, function (job) {
+        console.log('getJob callback');
+        console.log(job);
 
-                // get the vend products for the parts used
-                var partSkus = job.parts;
-                var products = [];
+        if (!job) {
+            console.log('No job retrieved');
+            return;
+        }
 
-                asyncLoop(partSkus.length, function(loop) {
+        getVendUser(function(userId) {
+
+            // TODO: check a sale doesn't already exist with the job
+
+            // get the vend products for the parts used
+            var partSkus = job.parts;
+            var products = [];
+
+            asyncLoop(partSkus.length, function(loop) {
                     var sku = partSkus[loop.iteration()];
                     console.log('sku: ' + sku);
 
@@ -69,53 +69,54 @@ chrome.omnibox.onInputEntered.addListener(
                     }, function (errorMessage) {
                         console.log('getVendProduct error. message: ' + errorMessage);
                     })},
-                    function() {
-                        console.log('product loop ended')
-                    }
-                );
+                function() {
+                    console.log('product loop ended')
+                }
+            );
 
-                var customer = getCustomerFromJob(job);
+            var customer = getCustomerFromJob(job);
 
-                postCustomer(customer, function (customerId) {
+            postCustomer(customer, function (customerId) {
 
-                    var sale = createSale(job, products, customerId, userId);
+                var sale = createSale(job, products, customerId, userId);
 
-                    postSale(sale, function (saleId) {
-                        console.log('postSale callback');
-                        console.log('saleId: ' + saleId);
+                postSale(sale, function (saleId) {
+                    console.log('postSale callback');
+                    console.log('saleId: ' + saleId);
 
-                        // take me to Vend! open the sale in current tab
-                        var deepLink = '/sell#sale/';
-                        var fullDeepLink = baseUrl + deepLink + saleId;
-                        console.log(fullDeepLink);
+                    // take me to Vend! open the sale in current tab
+                    var deepLink = '/sell#sale/';
+                    var fullDeepLink = baseUrl + deepLink + saleId;
+                    console.log(fullDeepLink);
 
-                        chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-                            console.log('chrome.tabs.query callback()');
-                            console.log(tabs);
+                    chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+                        console.log('chrome.tabs.query callback()');
+                        console.log(tabs);
 
-                            if (tabs == null) {
-                                alert('error - could not get active tab');
-                                return;
-                            }
+                        if (tabs == null || tabs.length == 0) {
+                            alert('Error - could not get active tab in browser');
+                            return;
+                        }
 
-                            var tabId = tabs[0].id;
-                            chrome.tabs.update(tabId, {url: fullDeepLink});
-                        })
-                    }, function (errorMessage) {
-                        console.log('postSale error. message: ' + errorMessage);
-                    });
+                        var tabId = tabs[0].id;
+                        chrome.tabs.update(tabId, {url: fullDeepLink});
+                    })
                 }, function (errorMessage) {
-                    // TODO: call handleVendApiError()
                     console.log('postSale error. message: ' + errorMessage);
                 });
-
             }, function (errorMessage) {
-                console.log('getVendUser error. message: ' + errorMessage);
+                // TODO: call handleVendApiError()
+                console.log('postSale error. message: ' + errorMessage);
             });
-        }, function(errorMessage) {
-            console.log('getJob error. message: ' + errorMessage);
+
+        }, function (errorMessage) {
+            console.log('getVendUser error. message: ' + errorMessage);
         });
+    }, function(errorMessage) {
+        console.log('getJob error. message: ' + errorMessage);
     });
+
+}
 
 function getJob(jobNumber, callback, errorCallback) {
     console.log('getJob(). jobNumber: ' + jobNumber);
